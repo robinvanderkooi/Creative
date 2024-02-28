@@ -1,0 +1,97 @@
+[gd_scene load_steps=5 format=3 uid="uid://dsq2gykvirg4o"]
+
+[ext_resource type="PackedScene" uid="uid://bjfqnmcg4yx0y" path="res://Scenes/Rubble/rubble.tscn" id="1_80ar2"]
+[ext_resource type="PackedScene" uid="uid://bpubno2sc2og3" path="res://Scenes/Player/Player.tscn" id="2_romao"]
+[ext_resource type="PackedScene" uid="uid://c2yb1c2avqpct" path="res://Scenes/Terrain/terrain.tscn" id="3_q20mh"]
+
+[sub_resource type="GDScript" id="GDScript_7b7c4"]
+script/source = "extends Camera2D
+
+func _input(event: InputEvent) -> void:
+	if event.is_action(\"ZoomIn\"):
+		zoom = zoom * 1.05
+	if event.is_action(\"ZoomOut\"):
+		zoom = zoom * 0.95
+"
+
+[node name="Testing" type="Node2D"]
+
+[node name="Rubble" parent="." instance=ExtResource("1_80ar2")]
+visible = false
+position = Vector2(123, 71)
+rotation = 2.89598
+
+[node name="Rubble2" parent="." instance=ExtResource("1_80ar2")]
+visible = false
+position = Vector2(-41, -34)
+rotation = 2.52628
+
+[node name="Rubble3" parent="." instance=ExtResource("1_80ar2")]
+visible = false
+position = Vector2(-45, 72)
+rotation = -3.52835
+
+[node name="Rubble4" parent="." instance=ExtResource("1_80ar2")]
+visible = false
+position = Vector2(61, 33)
+rotation = -2.59231
+
+[node name="Rubble5" parent="." instance=ExtResource("1_80ar2")]
+visible = false
+position = Vector2(-222, 196)
+rotation = 1.10687
+
+[node name="Rubble6" parent="." instance=ExtResource("1_80ar2")]
+visible = false
+position = Vector2(-99, -136)
+rotation = -4.67232
+
+[node name="Rubble7" parent="." instance=ExtResource("1_80ar2")]
+visible = false
+position = Vector2(28, 196)
+rotation = 0.637705
+
+[node name="Rubble8" parent="." instance=ExtResource("1_80ar2")]
+visible = false
+position = Vector2(106, -84)
+rotation = 0.447994
+
+[node name="Rubble9" parent="." instance=ExtResource("1_80ar2")]
+visible = false
+position = Vector2(-312, -30)
+rotation = -2.53277
+
+[node name="Rubble10" parent="." instance=ExtResource("1_80ar2")]
+visible = false
+position = Vector2(216, 196)
+rotation = 1.16848
+
+[node name="Rubble11" parent="." instance=ExtResource("1_80ar2")]
+visible = false
+position = Vector2(263, -62)
+rotation = 0.483046
+
+[node name="Rubble12" parent="." instance=ExtResource("1_80ar2")]
+visible = false
+position = Vector2(35, -229)
+rotation = -1.46401
+
+[node name="Rubble13" parent="." instance=ExtResource("1_80ar2")]
+visible = false
+position = Vector2(-240, -164)
+rotation = -0.00688634
+
+[node name="Rubble14" parent="." instance=ExtResource("1_80ar2")]
+visible = false
+position = Vector2(-146, 77)
+rotation = -0.87071
+
+[node name="Player" parent="." instance=ExtResource("2_romao")]
+
+[node name="Camera2D" type="Camera2D" parent="Player"]
+script = SubResource("GDScript_7b7c4")
+
+[node name="Terrain" parent="." instance=ExtResource("3_q20mh")]
+visible = false
+width = 2000
+height = 2000
