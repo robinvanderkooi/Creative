@@ -4,10 +4,11 @@ class_name Terrain
 
 #TODO REWORK THIS CLASS TO WORK WITH WORLD
 
-@export var count : int = 1000
+@export var count : int = 400
 @export var width : int = 1000
 @export var height : int = 1000
 @export var seed : int = -1
+@export var edge_range:float = 200
 
 var world_position:Coord
 
@@ -16,6 +17,9 @@ var bigpoints : PackedVector2Array = []
 var delaunay : PackedInt32Array = []
 var neighbor_triangles := Dictionary()
 var neighbor_points := Dictionary()
+
+var other_neighbor_counts := PackedInt32Array() 
+var other_neighbor_indexes := PackedInt32Array()
 
 var halfway_points := []
 var perpendicular_vectors := []
@@ -27,6 +31,7 @@ var point_values:=Dictionary()
 var _randy:RandomNumberGenerator = null
 var _hasInitialized := false
 
+var _bigpoint_debuginfo:PackedStringArray=[]
 
 #func _ready() -> void:
 	#GeneratePoints()
@@ -132,25 +137,89 @@ var _hasInitialized := false
 	#while StablizeTerrain():pass
 	#var hmmm = 123
 
+func create_debug_points():
+	var norm_label_settings:LabelSettings = LabelSettings.new()
+	norm_label_settings.font_color = (Color.LIGHT_SALMON + Color.WHITE)/2
+	var other_label_settings:LabelSettings = LabelSettings.new()
+	other_label_settings.font_color = (Color.LIGHT_BLUE + Color.WHITE)/2
+	for p in bigpoints.size():
+		var pnt = bigpoints[p]
+		var visual_point := Polygon2D.new()
+		visual_point.polygon = [Vector2(-5,0),Vector2(0,5),Vector2(5,0),Vector2(0,-5)]
+		visual_point.color = Color.BLACK
+		visual_point.position = pnt
+		visual_point.z_index = 3
+		add_child(visual_point)
+		var visual_point_ui : Label=Label.new()
+		visual_point_ui.text = _bigpoint_debuginfo[p]
+		visual_point_ui.scale = Vector2.ONE * 0.3
+		if p < count:
+			visual_point_ui.label_settings = norm_label_settings
+		else:
+			visual_point_ui.label_settings = other_label_settings
+			visual_point_ui.position += Vector2(0,-6)
+		visual_point.add_child(visual_point_ui)
+		add_child(visual_point_ui)
+	var new_box:Line2D=Line2D.new()
+	new_box.add_point(Vector2(-500,-500))
+	new_box.add_point(Vector2(-500,500))
+	new_box.add_point(Vector2(500,500))
+	new_box.add_point(Vector2(500,-500))
+	new_box.closed = true
+	new_box.width = 2
+	new_box.default_color = Color.ANTIQUE_WHITE
+	new_box.z_index = -10
+	add_child(new_box)
+	var position_ui : Label=Label.new()
+	position_ui.text = str(world_position.x) + ", " + str(world_position.y)
+	add_child(position_ui)
+
+
 func create_debug_scenes():
+	var norm_label_settings:LabelSettings = LabelSettings.new()
+	norm_label_settings.font_color = (Color.LIGHT_SALMON + Color.WHITE)/2
+	var other_label_settings:LabelSettings = LabelSettings.new()
+	other_label_settings.font_color = (Color.LIGHT_BLUE + Color.WHITE)/2
+
+	var new_box:Line2D=Line2D.new()
+	new_box.add_point(Vector2(-500,-500))
+	new_box.add_point(Vector2(-500,500))
+	new_box.add_point(Vector2(500,500))
+	new_box.add_point(Vector2(500,-500))
+	new_box.closed = true
+	new_box.width = 2
+	new_box.default_color = Color.ANTIQUE_WHITE
+	new_box.z_index = -10
+	add_child(new_box)
 	DoDelaunayBetter()
 	print("bigpoint size "+str(bigpoints.size()))
-	var original_points := bigpoints.slice(0,1000)
-	var other_points := bigpoints.slice(1000)
-	for pnt in original_points:
-		var visual_point := Polygon2D.new()
-		visual_point.polygon = [Vector2(-3.5,0),Vector2(0,3.5),Vector2(3.5,0),Vector2(0,-3.5)]
-		visual_point.color = Color.DARK_RED
-		visual_point.position = pnt
-		visual_point.z_index = 1
-		add_child(visual_point)
-	for pnt in other_points:
-		var visual_point := Polygon2D.new()
-		visual_point.polygon = [Vector2(-3,-3),Vector2(-3,3),Vector2(3,3),Vector2(3,-3)]
-		visual_point.color = Color.DARK_BLUE
-		visual_point.position = pnt
-		visual_point.z_index = 2
-		add_child(visual_point)
+	var original_points := bigpoints.slice(0,count)
+	var other_points := bigpoints.slice(count)
+	for p in bigpoints.size():
+		var visual_point_ui : Label=Label.new()
+		visual_point_ui.text = _bigpoint_debuginfo[p]
+		visual_point_ui.scale = Vector2.ONE * 0.3
+		if p < count:
+			visual_point_ui.label_settings = norm_label_settings
+		else:
+			visual_point_ui.label_settings = other_label_settings
+			visual_point_ui.position += Vector2(0,-6)
+		if p < count:
+			var visual_point := Polygon2D.new()
+			visual_point.polygon = [Vector2(-3.5,0),Vector2(0,3.5),Vector2(3.5,0),Vector2(0,-3.5)]
+			visual_point.color = Color.DARK_RED
+			visual_point.position = bigpoints[p]
+			visual_point.z_index = 1
+			visual_point.add_child(visual_point_ui)
+			add_child(visual_point)
+		else:
+			var visual_point := Polygon2D.new()
+			visual_point.polygon = [Vector2(-8,-8),Vector2(-8,8),Vector2(8,8),Vector2(8,-8)]
+			visual_point.color = Color.DARK_BLUE
+			visual_point.position = bigpoints[p]
+			visual_point.z_index = 2
+			visual_point.add_child(visual_point_ui)
+			add_child(visual_point)
 	for p in count:
 		var my_neighbors = neighbor_points[p]
 		for n in my_neighbors.size():
@@ -258,16 +327,21 @@ func DoDelaunayBetter():
 			if y == -1 : new_world_position.move_up()
 			if y == 1 : new_world_position.move_down()
 			var other_terrain:Terrain = World.terrains[new_world_position.to_index()]
-			var other_points = other_terrain.bigpoints.slice(0,1000)
+			var other_points = other_terrain.bigpoints.slice(0,count)
 			var count_added = 0
-			for pnt in other_points:
-				if x == -1 && pnt.x < 300.0: continue
-				if x == 1 && pnt.x > -300.0: continue
-				if y == -1 && pnt.y < 300.0: continue
-				if y == 1 && pnt.y > -300.0: continue
+			for p in other_points.size():
+				var pnt = other_points[p]
+				var max_range = edge_range
+				if x == -1 && pnt.x < max_range: continue
+				if x == 1 && pnt.x > -max_range: continue
+				if y == -1 && pnt.y < max_range: continue
+				if y == 1 && pnt.y > -max_range: continue
 				count_added+=1
 				var new_point:Vector2 = pnt + Vector2(x * 1000,y * 1000)
 				bigpoints.append(new_point)
+				_bigpoint_debuginfo.append("Pnt " + str(p) + " in " + new_world_position.to_string())
+			other_neighbor_counts.append(count_added)
+			other_neighbor_indexes.append(new_world_position.to_index())
 			print(["left","middle","right"][x+1]+" "+["top","middle","bottom"][y+1]+" "+str(count_added))
 	
 	for n in count:
@@ -315,6 +389,7 @@ func GeneratePoints():
 	_randy.seed = seed
 	for i in count:
 		bigpoints.append(Vector2(_randy.randf_range(width/-2,width/2),_randy.randf_range(width/-2,width/2)))
+		_bigpoint_debuginfo.append("Pnt " + str(i) + " in " + world_position.to_string())
 		
 
 
@@ -346,16 +421,28 @@ func StablizeTerrain():
 				var neighbor_value = 1.0
 				if point_values.has(neighbor_index):
 					neighbor_value = point_values[neighbor_index]
+				else:
+					var foreign_lookup = get_foreign_index(neighbor_index-count)
+					var foreign_terrain:Terrain=World.terrains[foreign_lookup[1]]
+					neighbor_value = foreign_terrain.point_values[foreign_lookup[0]]
 				neighbor_total += neighbor_value
 			var ratio = neighbor_total / neighbor_count
-			if ratio > 0.55 && myval == 0:
+			if ratio > 0.50 && myval == 0:
 				point_values[p] = 1.0
 				changed = true
-			if ratio < 0.45 && myval == 1:
+			if ratio < 0.50 && myval == 1:
 				point_values[p] = 0.0
 				changed = true
 
 
-
 func draw_polys():
 	pass
+
+
+func get_foreign_index(p:int)->Array:
+	for n in other_neighbor_counts.size():
+		if p < other_neighbor_counts[n]:
+			return [p, other_neighbor_indexes[n]]
+		else:
+			p -= other_neighbor_counts[n]
+	return []

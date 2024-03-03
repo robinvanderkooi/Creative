@@ -16,7 +16,7 @@ func move_left():x=(x+127)%128
 func move_right():x=(x+1)%128
 
 func to_index()->int:
-	return (x*128)+y
+	return x + (128 * y)
 func copy() -> Coord:
 	return new_coord(x,y)
 static func new_coord(x:int,y:int)->Coord:
@@ -27,3 +27,6 @@ static func new_coord(x:int,y:int)->Coord:
 
 func subtract(c:Coord) -> Coord:
 	return new_coord(x-c.x, y-c.y)
+
+func _to_string() -> String:
+	return "(" + str(x) + "," + str(y) + ")"

@@ -17,6 +17,10 @@ var _world_seed:=randi()
 var _world_seeds:=Dictionary()
 
 func _init() -> void:
+	var c = Coord.new_coord(2,5)
+	var ctoi = c.to_index()
+	var itoc = _index_to_coord(ctoi)
+	var hmmm = 123
 	pass
 func _ready() -> void:
 	pass
@@ -44,11 +48,8 @@ func _initialize_terrain():
 	
 	var data_map := _generate_data_map()
 	var render_map := _generate_render_map()
-	
 	data_map.sort()
 	render_map.sort()
-	current_data_map.sort()
-	current_render_map.sort()
 	
 	var to_ininialize:=PackedInt32Array()
 	var to_destroy:=PackedInt32Array()
@@ -60,30 +61,31 @@ func _initialize_terrain():
 	for ind in render_map: if !current_render_map.has(ind): to_render.append(ind)
 	for ind in current_render_map: if !render_map.has(ind): to_conceal.append(ind)
 	
-	if ! terrains.has(_coord_to_index(world_position)):
-		#Get the data for the terrain.
-		
-		print("total terrains: " + str(to_ininialize.size()))
-		for index in to_ininialize:
-			print("initialize: " + str(index))
-			if !terrains.has(index):
-				var current_scene = get_tree().current_scene
-				var new_terrain:Terrain= terrain_scene.instantiate()
-				var new_coords = _index_to_coord(index)
-				current_scene.add_child(new_terrain)
-				new_terrain.seed = world_seed + index
-				new_terrain.world_position = new_coords
-				new_terrain.initialize()
-				var diff = new_coords.subtract(world_position)
-				new_terrain.position = Vector2(1000 * diff.x, 1000 * diff.y)
-				terrains[index] = new_terrain
-		for index in to_render:
-			print("render: " + str(index))
-			terrains[index].create_debug_scenes()
-			#terrains[index].create_scenes()
-	
+	print("total terrains: " + str(to_ininialize.size()))
+	for index in to_ininialize:
+		print("initialize: " + str(index))
+		if !terrains.has(index):
+			var current_scene = get_tree().current_scene
+			var new_terrain:Terrain= terrain_scene.instantiate()
+			var new_coords = _index_to_coord(index)
+			current_scene.add_child(new_terrain)
+			new_terrain.seed = world_seed + index
+			new_terrain.world_position = new_coords
+			new_terrain.initialize()
+			var diff = new_coords.subtract(world_position)
+			new_terrain.position = Vector2(1000 * diff.x, 1000 * diff.y)
+			terrains[index] = new_terrain
+			#terrains[index].create_debug_points()
+	for index in to_render:
+		print("render: " + str(index))
+		#terrains[index].create_debug_scenes()
+		terrains[index].create_scenes()
 	current_data_map = data_map
 	current_render_map = render_map
+
+func move_scenes(v:Vector2):
+	for ter in terrains.values():
+		ter.position += v
 
 func _generate_data_map() -> PackedInt32Array:
 	return _generate_map_by_range(data_distance)
@@ -108,19 +110,39 @@ func _generate_map_by_range(distance:int) -> PackedInt32Array:
 """Player Scipts"""
 ##Hard reset the world position.
 func set_world_position(x:int, y:int):
-	world_position = Coord.new_coord(x,y)
-	_initialize_terrain()
+	set_world_position_coord(Coord.new_coord(x,y))
+func set_world_position_coord(c:Coord)->Vector2:
+	if world_position.to_index() != c.to_index():
+		var diff = world_position.subtract(c)
+		var moveby := Vector2(diff.x * 1000, diff.y * 1000)
+		move_scenes(moveby)
+		world_position = c
+		_initialize_terrain()
+		return -moveby
+	return Vector2.ZERO
 ##Report on your position. Sets world position if 
-func set_local_position(v:Vector2):
-	pass
+func set_local_position(player:Node2D,pos:Vector2):
+	var new_world_position:Coord=Coord.new_coord(64,64)
+	var x = floori((abs(pos.x)+500)/1000)
+	var y = floori((abs(pos.y)+500)/1000)
+	if x>0 || y>0:
+		for n in x:
+			if pos.x < 0 : new_world_position.move_left()
+			else: new_world_position.move_right()
+		for n in y:
+			if pos.y < 0 : new_world_position.move_up()
+			else: new_world_position.move_down()
+	var moveby = set_world_position_coord(new_world_position)
+	if player != null:
+		player.position += moveby
 
 
 """Helpers"""
 func _coords_to_index(x:int, y:int) -> int:
-	return (x * 128) + y
+	return x + (128 * y)
 func _coord_to_index(c:Coord) -> int:
 	return _coords_to_index(c.x,c.y)
 func _index_to_coord(i:int) -> Coord:
-	var y:int = i % 128
-	var x:int = (i-y)/128
-	return Coord.new_coord(y,x)
+	var x:int = i % 128
+	var y:int = (i-x)/128
+	return Coord.new_coord(x,y)

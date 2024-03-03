@@ -11,6 +11,7 @@ func _process(delta: float) -> void:
 	if contact_world:
 		contact_world = false
 		World.set_world_position(64,64)
+	World.set_local_position(self,position)
 	
 	var updown = Input.get_axis("move_up","move_down")
 	var leftright = Input.get_axis("move_left","move_right")
@@ -22,5 +23,5 @@ func _process(delta: float) -> void:
 	
 	get_node("Label").text = str(position)
 	
-	World.set_local_position(position)
+	World.set_local_position(null,position)
 
